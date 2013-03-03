@@ -11,7 +11,7 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
 
   def buildYamlFrontMatter( self, selection ):
     clauses_pattern = re.compile("\[\{\{(\S+)\}\}")
-    mixins_pattern = re.compile("\{\{(\S+)\}\}\s")
+    mixins_pattern = re.compile("[^\[]\{\{(\S+)\}\}")
     headers_pattern = re.compile("^(l+)\.\s",re.MULTILINE)
     yaml_pattern = re.compile("^(\s*---.*---\s*$)",re.MULTILINE|re.DOTALL)
 

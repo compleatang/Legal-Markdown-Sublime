@@ -37,22 +37,22 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
     new_yaml =  '---\n'
 
     if len(uniq_clauses) != 0:
-      new_yaml = new_yaml + '\n# Optional Clauses\n'
+      new_yaml += '\n# Optional Clauses\n'
     for clause in uniq_clauses:
       clause = ''.join(clause)
-      new_yaml = new_yaml + clause + ': \n'
+      new_yaml += clause + ': \n'
 
     if len(uniq_mixins) != 0:
-      new_yaml = new_yaml + '\n# Mixins\n'
+      new_yaml += '\n# Mixins\n'
     for mixin in uniq_mixins:
       mixin = ''.join(mixin)
-      new_yaml = new_yaml + mixin + ': \n'
+      new_yaml += mixin + ': \n'
 
     if len(uniq_headers) != 0:
-      new_yaml = new_yaml + '\n# Structured Headers\n'
+      new_yaml += '\n# Structured Headers\n'
     for header in uniq_headers:
-      new_yaml = new_yaml + 'level-' + str(header.count('l')) + ': \n'
-    new_yaml = new_yaml + '\n---\n'
+      new_yaml += 'level-' + str(header.count('l')) + ': \n'
+    new_yaml += '\n---\n'
 
     selection = new_yaml + selection
     return selection

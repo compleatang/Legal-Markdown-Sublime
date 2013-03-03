@@ -1,5 +1,5 @@
 # coding=utf8
-import sublime_plugin, sublime, re, sets
+import sublime_plugin, sublime, re
 
 # Build Yaml Front Matter
 class BuildYamlFrontMatter(sublime_plugin.TextCommand):

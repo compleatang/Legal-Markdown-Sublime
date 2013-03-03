@@ -54,5 +54,5 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
       new_yaml += 'level-' + str(header.count('l')) + ': \n'
     new_yaml += '\n---\n'
 
-    selection = new_yaml + selection
-    return selection
+    full_monty = [new_yaml, selection]
+    return ''.join(full_monty)

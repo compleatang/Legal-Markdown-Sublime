@@ -51,6 +51,10 @@ MIT License - (c) 2012 - Watershed Legal Services, PLLC
 
 # TODO / Roadmap
 
-[X] Integrate function to automatically build YAML frontmatter.
-[ ] Integrate Gem functionality to render the legal markdown to full markdown.
-[ ] Integrate Pandoc.
+- [X] Integrate function to automatically build YAML frontmatter.
+- [ ] Syntax highlighting by forking SmartMarkdown's Template and/or making a .lmd tmlanguage.
+- [ ] Go to mixin in YAML header; go to mixin in the text. l. - as Constants; ll. - as def's; mixins - as keywords (def, if, etc.); clauses - as strings; yaml - as yaml syntax already is...
+- [ ] Integrate Gem functionality to render the legal markdown to full markdown.
+- [ ] Integrate Pandoc.
+- [ ] Keymapings for `...?ASK?...` and `...?CONFIRM?...`
+- [ ] Form a checklist from questions in template

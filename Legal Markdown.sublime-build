@@ -1,0 +1,16 @@
+{
+	"selector": "text.markdown",
+
+	"variants": [
+		{
+			"cmd": ["/usr/bin/env", "ruby", "~/sites/wsl/markdown_legal/bin/legal2md", "--headers", "$file"],
+			"name": "Build YAML Frontmatter",
+			"shell": true
+		},
+		{
+			"cmd": ["/usr/bin/env", "ruby", "~/sites/wsl/markdown_legal/bin/legal2md", "$file", "$file_base_name.md"],
+          	"name": "Convert from Legal Markdown to Normal Markdown",
+          	"shell": true
+		}
+	]
+}

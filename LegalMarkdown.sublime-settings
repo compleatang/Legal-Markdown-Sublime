@@ -1,0 +1,5 @@
+{
+  "ruby": "/usr/bin/env ruby",
+  "file_patterns": [ "\\.md", "\\.lmd", "\\.markdown", "\\.legalmarkdown" ],
+  "save_on_yamlize": true
+}

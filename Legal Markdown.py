@@ -1,110 +1,153 @@
 # coding=utf8
-import os
-import sublime
-import sublime_plugin
-import threading
-import subprocess
-import functools
 import os.path
+import sublime, sublime_plugin, sys, re
+import subprocess
 
 # Build Yaml Front Matter
-class BuildYamlFrontMatter(sublime_plugin.WindowCommand):
-  def run(self):
-    self.get_window().show_input_panel("Legal Markdown", "",
-        self.on_input, None, None)
+class BuildYamlFrontMatter(sublime_plugin.TextCommand):
+  def run(self, edit, error=True, save=True):
+    self.settings = sublime.load_settings('LegalMarkdown.sublime-settings')
+    self.get_selection_position()
+    self.active_view = self.view.window().active_view()
+    self.buffer_region = sublime.Region(0, self.active_view.size())
+    self.update_view(self.yamlize_buffer())
+    if save:
+      self.view.run_command('save')
+    self.reset_selection_position()
 
-  def on_input(self, command):
-    command = str(command)  # avoiding unicode
-    import shlex
-    command_splitted = ['legal2md'] + shlex.split(command)
-    print command_splitted
-    self.run_command(command_splitted)
+  def yamlize_buffer(self):
+    working_dir = os.path.dirname(self.view.file_name())
+    body = self.active_view.substr(self.buffer_region)
+    yamlizer = subprocess.Popen(self.cmd(), shell=True, cwd=working_dir, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    out = yamlizer.communicate(body.encode("utf-8"))[0].decode('utf8')
+    if (out == "" and body != ""):
+      sublime.error_message("check your ruby interpreter settings")
+      return body
+    else:
+      return out
 
-  def get_window(self):
-      return sublime.active_window()
+  def update_view(self, contents):
+    edit = self.view.begin_edit()
+    self.view.erase(edit, self.buffer_region)
+    self.view.insert(edit, 0, contents)
+    self.view.end_edit(edit)
 
-  def run_command(self, command, filter_empty_args=True, **kwargs):
-      if filter_empty_args:
-          command = [arg for arg in command if arg]
-      if 'working_dir' not in kwargs:
-          kwargs['working_dir'] = self.get_working_dir()
-      if 'fallback_encoding' not in kwargs and self.active_view() and self.active_view().settings().get('fallback_encoding'):
-          kwargs['fallback_encoding'] = self.active_view().settings().get('fallback_encoding').rpartition('(')[2].rpartition(')')[0]
+  def reset_selection_position(self):
+    self.view.sel().clear()
+    self.view.sel().add(self.region)
+    self.view.show_at_center(self.region)
 
-      thread = CommandThread(command, callback, **kwargs)
-      thread.start()
+  def get_selection_position(self):
+    sel         = self.view.sel()[0].begin()
+    pos         = self.view.rowcol(sel)
+    target      = self.view.text_point(pos[0], 0)
+    self.region = sublime.Region(target)
 
-      message = kwargs.get('status_message', False) or ' '.join(command)
-      sublime.status_message(message)
+  def cmd(self, path = "-"):
+    ruby_interpreter = self.settings.get('ruby') or "/usr/bin/env ruby"
+    ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'lib', 'legal_markdown.rb')
+    args = [ "--headers", "'" + unicode(path) + "'"]
+    command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
+    return command
 
-  @property
-  def fallback_encoding(self):
-      if self.active_view() and self.active_view().settings().get('fallback_encoding'):
-          return self.active_view().settings().get('fallback_encoding').rpartition('(')[2].rpartition(')')[0]
+# =====================================
 
-  def get_working_dir(self):
-      file_name = self._active_file_name()
-      if file_name:
-          return os.path.realpath(os.path.dirname(file_name))
-      else:
-          try:  # handle case with no open folder
-              return self.window.folders()[0]
-          except IndexError:
-              return ''
+#   def run(self):
+#     self.get_window().show_input_panel("Legal Markdown", "",
+#         self.on_input, None, None)
 
-  def _active_file_name(self):
-      view = self.active_view()
-      if view and view.file_name() and len(view.file_name()) > 0:
-          return view.file_name()
+#   def on_input(self, command):
+#     command = str(command)  # avoiding unicode
+#     import shlex
+#     command_splitted = ['legal2md'] + shlex.split(command)
+#     print command_splitted
+#     self.run_command(command_splitted)
 
-class CommandThread(threading.Thread):
-    def __init__(self, command, on_done, working_dir="", fallback_encoding="", **kwargs):
-        threading.Thread.__init__(self)
-        self.command = command
-        self.on_done = on_done
-        self.working_dir = working_dir
-        if "stdin" in kwargs:
-            self.stdin = kwargs["stdin"]
-        else:
-            self.stdin = None
-        if "stdout" in kwargs:
-            self.stdout = kwargs["stdout"]
-        else:
-            self.stdout = subprocess.PIPE
-        self.fallback_encoding = fallback_encoding
-        self.kwargs = kwargs
+#   def get_window(self):
+#       return sublime.active_window()
 
-    def run(self):
-        try:
+#   def run_command(self, command, filter_empty_args=True, **kwargs):
+#       if filter_empty_args:
+#           command = [arg for arg in command if arg]
+#       if 'working_dir' not in kwargs:
+#           kwargs['working_dir'] = self.get_working_dir()
+#       if 'fallback_encoding' not in kwargs and self.active_view() and self.active_view().settings().get('fallback_encoding'):
+#           kwargs['fallback_encoding'] = self.active_view().settings().get('fallback_encoding').rpartition('(')[2].rpartition(')')[0]
 
-            # Ignore directories that no longer exist
-            if os.path.isdir(self.working_dir):
+#       thread = CommandThread(command, callback, **kwargs)
+#       thread.start()
 
-                # Per http://bugs.python.org/issue8557 shell=True is required to
-                # get $PATH on Windows. Yay portable code.
-                shell = os.name == 'nt'
-                if self.working_dir != "":
-                    os.chdir(self.working_dir)
+#       message = kwargs.get('status_message', False) or ' '.join(command)
+#       sublime.status_message(message)
 
-                proc = subprocess.Popen(self.command,
-                    stdout=self.stdout, stderr=subprocess.STDOUT,
-                    stdin=subprocess.PIPE,
-                    shell=shell, universal_newlines=True)
-                output = proc.communicate(self.stdin)[0]
-                if not output:
-                    output = ''
-                # if sublime's python gets bumped to 2.7 we can just do:
-                # output = subprocess.check_output(self.command)
-                main_thread(self.on_done,
-                    _make_text_safeish(output, self.fallback_encoding), **self.kwargs)
+#   @property
+#   def fallback_encoding(self):
+#       if self.active_view() and self.active_view().settings().get('fallback_encoding'):
+#           return self.active_view().settings().get('fallback_encoding').rpartition('(')[2].rpartition(')')[0]
 
-        except subprocess.CalledProcessError, e:
-            main_thread(self.on_done, e.returncode)
-        except OSError, e:
-            if e.errno == 2:
-                main_thread(sublime.error_message, "Legal Markdown binary could not be found in PATH\n\nPATH is: %s" % os.environ['PATH'])
-            else:
-                raise e
+#   def get_working_dir(self):
+#       file_name = self._active_file_name()
+#       if file_name:
+#           return os.path.realpath(os.path.dirname(file_name))
+#       else:
+#           try:  # handle case with no open folder
+#               return self.window.folders()[0]
+#           except IndexError:
+#               return ''
+
+#   def _active_file_name(self):
+#       view = self.active_view()
+#       if view and view.file_name() and len(view.file_name()) > 0:
+#           return view.file_name()
+
+# class CommandThread(threading.Thread):
+#     def __init__(self, command, on_done, working_dir="", fallback_encoding="", **kwargs):
+#         threading.Thread.__init__(self)
+#         self.command = command
+#         self.on_done = on_done
+#         self.working_dir = working_dir
+#         if "stdin" in kwargs:
+#             self.stdin = kwargs["stdin"]
+#         else:
+#             self.stdin = None
+#         if "stdout" in kwargs:
+#             self.stdout = kwargs["stdout"]
+#         else:
+#             self.stdout = subprocess.PIPE
+#         self.fallback_encoding = fallback_encoding
+#         self.kwargs = kwargs
+
+#     def run(self):
+#         try:
+
+#             # Ignore directories that no longer exist
+#             if os.path.isdir(self.working_dir):
+
+#                 # Per http://bugs.python.org/issue8557 shell=True is required to
+#                 # get $PATH on Windows. Yay portable code.
+#                 shell = os.name == 'nt'
+#                 if self.working_dir != "":
+#                     os.chdir(self.working_dir)
+
+#                 proc = subprocess.Popen(self.command,
+#                     stdout=self.stdout, stderr=subprocess.STDOUT,
+#                     stdin=subprocess.PIPE,
+#                     shell=shell, universal_newlines=True)
+#                 output = proc.communicate(self.stdin)[0]
+#                 if not output:
+#                     output = ''
+#                 # if sublime's python gets bumped to 2.7 we can just do:
+#                 # output = subprocess.check_output(self.command)
+#                 main_thread(self.on_done,
+#                     _make_text_safeish(output, self.fallback_encoding), **self.kwargs)
+
+#         except subprocess.CalledProcessError, e:
+#             main_thread(self.on_done, e.returncode)
+#         except OSError, e:
+#             if e.errno == 2:
+#                 main_thread(sublime.error_message, "Legal Markdown binary could not be found in PATH\n\nPATH is: %s" % os.environ['PATH'])
+#             else:
+#                 raise e
 
 
     # selection = sublime.Region(0L, self.view.size())

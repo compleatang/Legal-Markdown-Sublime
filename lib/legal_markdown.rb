@@ -13,13 +13,13 @@ class LegalToMarkdown
     elsif ARGV.include?("--headers")
       MakeYamlFrontMatter.new(ARGV)      
     else
-      legl_to_markdown(ARGV)
+      LegalToMarkdown.new(ARGV)
     end
   end # main
 
-  def legl_to_markdown(*args)
+  def initialize(*args)
     # Get the Content & Yaml Data
-    ARGV.include?("-") ? data = STDIN.read : data = load(*args)
+    data = load(*args)
     parsed_content = parse_file(data[0])
     # Run the Mixins
     mixed_content = mixing_in(parsed_content[0], parsed_content[1])
@@ -37,31 +37,13 @@ class LegalToMarkdown
   # ----------------------
   # Parse Options & Load File 
   def load(*args)
-
-    # OPTIONS
-    # OPTS = {}
-    # op = OptionParser.new do |x|
-    #     x.banner = 'cat <options> <file>'      
-    #     x.separator ''
-
-    #     x.on("-A", "--show-all", "Equivalent to -vET")               
-    #         { OPTS[:showall] = true }      
-
-    #     x.on("-b", "--number-nonblank", "number nonempty output lines") 
-    #         { OPTS[:number_nonblank] = true }      
-
-    #     x.on("-x", "--start-from NUM", Integer, "Start numbering from NUM")        
-    #         { |n| OPTS[:start_num] = n }
-
-    #     x.on("-h", "--help", "Show this message") 
-    #         { puts op;  exit }
-    # end
-    # op.parse!(ARGV)
-
-    # Load Source File
     @output_file = ARGV[-1]
     @input_file = ARGV[-2] ? ARGV[-2] : ARGV[-1]
-    source_file = File::read(@input_file) if File::exists?(@input_file) && File::readable?(@input_file)
+    if @output_file != "-" && @input_file != "-"
+      source_file = File::read(@input_file) if File::exists?(@input_file) && File::readable?(@input_file)
+    elsif @input_file == "-"
+      source_file = STDIN.read
+    end
     return [source_file, '']
   end
 
@@ -163,15 +145,17 @@ class LegalToMarkdown
   def pandoc_title_block( headers )
     title_block = ""
     headers.each do | header |
-      if header[0].casecmp("title") == 0
-        title_block << "% " + header[1] + "\n"
-        headers.delete( header )
-      elsif header[0].casecmp("author") == 0
-        title_block << "% " + header[1] + "\n"
-        headers.delete( header )
-      elsif header[0].casecmp("date") == 0
-        title_block << "% " + header[1] + "\n\n"
-        headers.delete( header )
+      if header[1]
+        if header[0].casecmp("title") == 0
+          title_block << "% " + header[1] + "\n"
+          headers.delete( header )
+        elsif header[0].casecmp("author") == 0
+          title_block << "% " + header[1] + "\n"
+          headers.delete( header )
+        elsif header[0].casecmp("date") == 0
+          title_block << "% " + header[1] + "\n\n"
+          headers.delete( header )
+        end
       end
     end
     return title_block
@@ -221,21 +205,23 @@ class LegalToMarkdown
 
       substitutions = {}
       headers.each do | header, value |
-        if header =~ /level-\d/
-          level = header[-1].to_i
-          base = "l"
-          search = base * level + "."
-          # substitutions hash example {"ll."=>[:type8,"Article"],}
-          substitutions[search]= set_the_subs_arrays(value.to_s)
-        end
-        if header =~ /no-reset/
-          no_subs_array = value.split(", ")
-          no_subs_array.each{|e| substitutions[e][6] = :no_reset }
-        end
-        @no_indt_array = []
-        if header =~ /no-indent/
-          @no_indt_array = value.split(", ")
-        end
+        if value
+          if header =~ /level-\d/
+            level = header[-1].to_i
+            base = "l"
+            search = base * level + "."
+            # substitutions hash example {"ll."=>[:type8,"Article"],}
+            substitutions[search]= set_the_subs_arrays(value.to_s)
+          end
+          if header =~ /no-reset/
+            no_subs_array = value.split(", ")
+            no_subs_array.each{|e| substitutions[e][6] = :no_reset }
+          end
+          @no_indt_array = []
+          if header =~ /no-indent/
+            @no_indt_array = value.split(", ")
+          end
+        end  
       end
 
       return substitutions
@@ -433,8 +419,8 @@ class LegalToMarkdown
   # Write the file 
 
   def write_it( final_content )
-    if @output_file
-      File.open(output_file, "w") {|f| f.write( final_content ) }
+    if @output_file && @output_file != "-"
+      File.open(@output_file, "w") {|f| f.write( final_content ) }
     else 
       STDOUT.write final_content
     end

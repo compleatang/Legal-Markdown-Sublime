@@ -1,6 +1,10 @@
 [
     {
-        "caption": "Build YAML Front Matter",
+        "caption": "Make YAML Front Matter",
         "command": "build_yaml_front_matter"
+    }, 
+    {
+    	"caption": "Legal Markdown to Normal Markdown",
+    	"command": "legal_markdown_to_normal_markdown"
     }
 ]

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>fileTypes</key>
+	<array>
+		<string>lmd</string>
+		<string>legalmarkdown</string>
+		<string>legalmd</string>
+	</array>
+	<key>name</key>
+	<string>Legal Markdown</string>
+	<key>patterns</key>
+	<array>
+		<dict>
+			<key>comment</key>
+			<string>level 1 headers and structured headers</string>
+			<key>match</key>
+			<string>^(l\.|#\s*).*$</string>
+			<key>name</key>
+			<string>entity.name.type.class</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>level 2 headers and structured headers</string>
+			<key>match</key>
+			<string>^(ll\.|##)\s*</string>
+			<key>name</key>
+			<string>keyword</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>level 3 headers and structured headers</string>
+			<key>match</key>
+			<string>^(lll\.|###)\s*</string>
+			<key>name</key>
+			<string>entity.name.function</string>
+		</dict>
+		<dict>
+			<key>captures</key>
+			<dict>
+				<key>1</key>
+				<dict>
+					<key>name</key>
+					<string>string.quoted</string>
+				</dict>
+				<key>2</key>
+				<dict>
+					<key>name</key>
+					<string>variable.language</string>
+				</dict>
+				<key>3</key>
+				<dict>
+					<key>name</key>
+					<string>string.quoted</string>
+				</dict>
+			</dict>
+			<key>comment</key>
+			<string>optional clauses</string>
+			<key>match</key>
+			<string>(\[\{\{.+?\}\})(.+?)(\])</string>
+			<key>name</key>
+			<string>text.html.markdown.legalmarkdown</string>
+		</dict>
+		<dict>
+			<key>captures</key>
+			<dict>
+				<key>1</key>
+				<dict>
+					<key>name</key>
+					<string>support.function.builtin</string>
+				</dict>
+			</dict>
+			<key>comment</key>
+			<string>mixins</string>
+			<key>match</key>
+			<string>[^(\[](\{\{.+?\}\})</string>
+			<key>name</key>
+			<string>support.function</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>for questions in ...?ASK?...</string>
+			<key>match</key>
+			<string>\.\.\.\?.*?\?\.\.\.</string>
+			<key>name</key>
+			<string>constant</string>
+		</dict>
+		<dict>
+			<key>begin</key>
+			<string>\&lt;!--</string>
+			<key>end</key>
+			<string>--\&gt;</string>
+			<key>name</key>
+			<string>comment</string>
+		</dict>
+	</array>
+	<key>scopeName</key>
+	<string>text.html.markdown.legalmarkdown</string>
+	<key>uuid</key>
+	<string>5136cf6c-9649-4c59-a829-78c089c04903</string>
+</dict>
+</plist>

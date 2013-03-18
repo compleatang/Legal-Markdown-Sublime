@@ -1,16 +1,22 @@
 # Introduction
 
-This package is a set of commands to help build legal documents in Sublime. It is opinionated in that I prefer to use [Pandoc](http://johnmacfarlane.net/pandoc/), along with my [Legal Markdown Gem](https://github.com/compleatang/legal-markdown). I use the Gem as a prepocessor and Pandoc as a post processor.
+This package is a set of commands to help build legal documents in Sublime. It is opinionated in that I prefer to use [Pandoc](http://johnmacfarlane.net/pandoc/), along with my [Legal Markdown Gem](https://github.com/compleatang/legal-markdown). I use the Gem as a prepocessor and Pandoc as a post processor. To make it easier for those who may not want to install the gem, the ruby files have been extracted into the package as standalone ruby files. 
 
 # Dependencies
 
-You will need to have both the gem and pandoc installed and in your PATH for this Package to work properly. See the above links for installing these.
+You will need to have both pandoc installed and in your PATH for this Package to work fully. You will also need ruby on your system. 
 
 # Using
 
 ## Step 1 - Build the YAML Front Matter
 
-The Package will scan your document for optional clauses, mixins, and structured headers according to the Gem format and will automatically populate the YAML front matter for you. I find this a lifesaver on long templates -- particularly when I've changed some of the provisions deep in the document. To build the YAML Front Matter simply open Command Pallette and find Build YAML Front Matter. That's it. I currently have a default key binding of `ctrl+shift+l` for legal that will also run the command. The command is greedy in that it will strip any existing YAML Front Matter you currently have, so be careful using if you've put some unique stuff in the YAML front matter.
+The Package assists you to build legal document templates using optional clauses, mixins, and structured headers according to the format established in the `legal_markdown` [gem](https://github.com/compleatang/legal-markdown). 
+
+I find this a lifesaver on long templates -- particularly when I've changed some of the provisions deep in the document. To build the YAML Front Matter simply open Command Pallette and find "Make YAML Front Matter". That's it. I currently have a default key binding of `ctrl+shift+l` followed by `ctrl+shift+y` that will also run the command. 
+
+## Step 2 - Parse Legal Markdown to Create Normal Markdown
+
+After you have worked on your template, forked it or whatever, you can easily parse the legal markdown to create normal markdown. To use this function open Command Pallete and find "Legal Markdown to Normal Markdown". You can also use the default key binding of `ctrl+shift+l` followed by `ctrl+shift+b` which will also run the command (or any other key binding you set in your User directory).
 
 # Installation
 
@@ -47,14 +53,13 @@ When you have added a new file then simply commit that code, push to your fork o
 
 # [Source Code](https://github.com/compleatang/Legal-Markdown-Sublime)
 
-MIT License - (c) 2012 - Watershed Legal Services, PLLC
+MIT License - (c) 2013 - Watershed Legal Services, PLLC
 
 # TODO / Roadmap
 
 - [X] Integrate function to automatically build YAML frontmatter.
-- [ ] Syntax highlighting by forking SmartMarkdown's Template and/or making a .lmd tmlanguage.
-- [ ] Go to mixin in YAML header; go to mixin in the text. l. - as Constants; ll. - as def's; mixins - as keywords (def, if, etc.); clauses - as strings; yaml - as yaml syntax already is...
-- [ ] Integrate Gem functionality to render the legal markdown to full markdown.
+- [X] Integrate Gem functionality to render the legal markdown to full markdown.
+- [ ] Syntax highlighting by forking SmartMarkdown's Template and/or making a .lmd tmlanguage.  l. - as Constants; ll. - as def's; mixins - as keywords (def, if, etc.); clauses - as strings; yaml - as yaml syntax already is...
 - [ ] Integrate Pandoc.
 - [ ] Keymapings for `...?ASK?...` and `...?CONFIRM?...`
 - [ ] Form a checklist from questions in template

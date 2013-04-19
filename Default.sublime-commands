@@ -1,10 +1,14 @@
 [
     {
-        "caption": "Make YAML Front Matter",
+        "caption": "Legal Markdown - Make YAML Front Matter",
         "command": "build_yaml_front_matter"
     }, 
     {
-    	"caption": "Legal Markdown to Normal Markdown",
+    	"caption": "Legal Markdown - Convert to Normal Markdown",
     	"command": "legal_markdown_to_normal_markdown"
+    },
+    {
+        "caption": "Legal Markdown - Build Final Document via Pandoc",
+        "command": "legal_markdown_export"
     }
 ]

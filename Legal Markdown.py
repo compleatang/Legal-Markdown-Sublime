@@ -70,7 +70,7 @@ class LegalMarkdownToNormalMarkdown(sublime_plugin.WindowCommand):
       self.window.open_file(output_file)
 
   def cmd(self, output_file):
-    ruby_interpreter = self.settings.get('ruby') or "/usr/bin/env ruby"
+    ruby_interpreter = self.settings.get('ruby-path') or "/usr/bin/env ruby"
     ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'lib', 'legal_markdown.rb')
     args = ["-", "'" + output_file + "'"]
     command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
@@ -80,3 +80,95 @@ class LegalMarkdownToNormalMarkdown(sublime_plugin.WindowCommand):
     view = self.window.active_view()
     if view and view.file_name() and len(view.file_name()) > 0:
         return view.file_name()
+
+class LegalMarkdownExport(sublime_plugin.WindowCommand):
+
+    def run(self):
+        self.active_view = self.window.active_view()
+        self.buffer_region = sublime.Region(0, self.active_view.size())
+        self.window.show_quick_panel(self.get_the_settings('build-formats').keys(), self.build_new_format)
+
+    def build_new_format(self, format_to):
+        formats = self.get_the_settings('build-formats')
+        if format_to == -1:
+            return
+        format_to = formats[formats.keys()[format_to]]
+        view = self.window.active_view()
+
+        # string to work with
+        contents = self.mdizer(self.active_view.substr(self.buffer_region))
+
+        # pandoc params
+        command = [self.find_binary('pandoc')]
+        # configured options
+        if 'options' in format_to:
+            command.extend(format_to['options'])
+        if 'from' in format_to:
+            command.extend(['-f'])
+            command.extend(format_to['from'])
+        if 'to' in format_to:
+            command.extend(['-t'])
+            command.extend(format_to['to'])
+        # if output file
+        output_file = False
+        if format_to['file-output'] == 'true':
+            output_file = os.path.splitext(sublime.Window.active_view(sublime.active_window()).file_name())[0]
+            output_file_name =  '"' + output_file + "." + format_to['to'][0] + '"'
+            command.extend(['-o', output_file_name])
+        # final build
+        command = ' '.join(command)
+
+        # run pandoc
+        # sublime.message_dialog(command)
+        process = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if contents:
+            result, error = process.communicate(contents.encode('utf-8'))
+        else:
+            contents = self.active_view.substr(self.buffer_region)
+            result, error = process.communicate(contents.encode('utf-8'))
+
+        # replace buffer and set syntax
+        if output_file:
+            if format_to['open-file-after-build'] and format_to['open-file-after-build'] != 'false':
+                open_command = [format_to['open-file-after-build'], output_file_name]
+                open_command = ' '.join(open_command)
+                subprocess.Popen(open_command, shell=True)
+            else:
+                sublime.message_dialog('Wrote to file ' + output_file_name)
+        else:
+            if result:
+                edit = view.begin_edit()
+                view.replace(edit, region, result)
+                if 'syntax_file' in format_to:
+                    view.set_syntax_file(format_to['syntax_file'])
+                view.end_edit(edit)
+            if error:
+                sublime.error_message(error)
+
+    def get_the_settings(self, key):
+        return sublime.load_settings('LegalMarkdown.sublime-settings').get(key)
+
+    def find_binary(self, name):
+        if self.get_the_settings('pandoc-path') is not None:
+            return os.path.join(self.get_the_settings('pandoc-path'), name)
+        # Try the path first
+        for dir in os.environ['PATH'].split(os.pathsep):
+            path = os.path.join(dir, name)
+            if os.path.exists(path):
+                return path
+        dirs = ['/usr/local/bin', '/usr/bin']
+        for dir in dirs:
+            path = os.path.join(dir, name)
+            if os.path.exists(path):
+                return path
+        return None
+
+    def mdizer(self, contents):
+        ruby_interpreter = os.path.join(self.get_the_settings('ruby-path')) or "/usr/bin/env ruby"
+        ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'lib', 'legal_markdown.rb')
+        args = ["-", "-"]
+        md_command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
+        mdizr = subprocess.Popen(md_command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        out = mdizr.communicate(contents.encode("utf-8"))[0].decode('utf8')
+        return out

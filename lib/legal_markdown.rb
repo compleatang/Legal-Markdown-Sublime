@@ -41,7 +41,7 @@ class LegalToMarkdown
     @input_file = ARGV[-2] ? ARGV[-2] : ARGV[-1]
     if @output_file != "-" && @input_file != "-"
       source_file = File::read(@input_file) if File::exists?(@input_file) && File::readable?(@input_file)
-    elsif @input_file == "-"
+    elsif @input_file == "-" || @input_file == ""
       source_file = STDIN.read
     end
     return [source_file, '']

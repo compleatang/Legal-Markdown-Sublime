@@ -1,50 +1,54 @@
 #! ruby
 require 'yaml'
-require 'English'
-require File.dirname(__FILE__) + '/legal_markdown/roman-numerals.rb'
+require File.dirname(__FILE__) + '/legal_markdown/roman-numerals'
 require File.dirname(__FILE__) + '/legal_markdown/make_yaml_frontmatter.rb'
 
 class LegalToMarkdown
 
-  def self.main
+  def self.main(*args)
     if(!ARGV[0])
-      STDERR.puts "usage: Markdown filenames or \"-\" for stdin."
+      STDERR.puts "Sorry, I didn't understand that. Please give me your legal_markdown filenames or \"-\" for stdin."
       exit 0
     elsif ARGV.include?("--headers")
-      MakeYamlFrontMatter.new(ARGV)      
+      MakeYamlFrontMatter.new(ARGV)
     else
       LegalToMarkdown.new(ARGV)
     end
   end # main
 
   def initialize(*args)
-    # Get the Content & Yaml Data
-    data = load(*args)
-    parsed_content = parse_file(data[0])
-    # Run the Mixins
-    mixed_content = mixing_in(parsed_content[0], parsed_content[1])
-    # Run the Pandoc Title Block
-    pandoc_content = pandoc_title_block( mixed_content[1] ) + mixed_content[0]
-    # Run the Headers
-    headed_content = headers_on(mixed_content[1], pandoc_content)
-    # Write the file
-    write_it( headed_content )
+    data = load(*args)                                              # Get the Content
+    parsed_content = parse_file(data)                               # Load the YAML front matter
+    mixed_content = mixing_in(parsed_content[0], parsed_content[1]) # Run the Mixins
+    headed_content = headers_on(mixed_content[0], mixed_content[1]) # Run the Headers
+    file = write_it( headed_content )                               # Write the file
   end
 
   private
   # ----------------------
   # |      Step 1        |
   # ----------------------
-  # Parse Options & Load File 
+  # Parse Options & Load File
   def load(*args)
     @output_file = ARGV[-1]
     @input_file = ARGV[-2] ? ARGV[-2] : ARGV[-1]
-    if @output_file != "-" && @input_file != "-"
-      source_file = File::read(@input_file) if File::exists?(@input_file) && File::readable?(@input_file)
-    elsif @input_file == "-" || @input_file == ""
-      source_file = STDIN.read
+    begin
+      if @output_file != "-" && @input_file != "-"
+        source_file = File::read(@input_file) if File::exists?(@input_file) && File::readable?(@input_file)
+      elsif @input_file == "-"
+        source_file = STDIN.read
+      end
+      source_file.scan(/(@include (.+)$)/).each do |set|
+        partial_file = set[1]
+        to_replace = set[0]
+        partial_contents = File::read(partial_file) if File::exists?(partial_file) && File::readable?(partial_file)
+        source_file.gsub!(to_replace, partial_contents)
+      end
+      return source_file
+    rescue => e
+      puts "Sorry, I could not read the input file #{@input_file}: #{e.message}."
+      exit 0
     end
-    return [source_file, '']
   end
 
   # ----------------------
@@ -55,17 +59,18 @@ class LegalToMarkdown
   def parse_file(source)
     begin
       yaml_pattern = /\A(---\s*\n.*?\n?)^(---\s*$\n?)/m
-      if source =~ yaml_pattern
-        data = YAML.load($1)
-        content = $POSTMATCH
+      parts = source.partition( yaml_pattern )
+      if parts[1] != ""
+        headers = YAML.load(parts[1])
+        content = parts[2]
       else
-        data = {}
+        headers = {}
         content = source
       end
-    rescue => e 
-      puts "Error reading file #{File.join(ARGV[0])}: #{e.message}"
+    rescue => e
+      puts "Sorry, something went wrong when I was loading the YAML front matter: #{e.message}."
     end
-    return [data, content]
+    return [headers, content]
   end
 
   # ----------------------
@@ -78,20 +83,20 @@ class LegalToMarkdown
     def clauses_mixins( mixins, content )
       clauses_to_delete = []
       clauses_to_mixin = []
-      
+
       mixins.each do | mixin, replacer |
         replacer = replacer.to_s.downcase
         clauses_to_delete << mixin if replacer == "false"
         clauses_to_mixin << mixin if replacer == "true"
       end
-      
+
       clauses_to_delete.each { |m| mixins.delete(m) }
       clauses_to_mixin.each { |m| mixins.delete(m) }
 
       until clauses_to_delete.size == 0
         clauses_to_delete.each do | mixin |
-          pattern = /(\[{{#{mixin}}}\s*)(.*?\n?)(\])/m
-          sub_pattern = /\[{{(\S+)}}/m
+          pattern = /(\[{{#{mixin}}}\s*?)(.*?\n*?)(\])/m
+          sub_pattern = /\[{{(\S+?)}}\s*?/
           content[pattern]
           get_it_all = $& || ""
           sub_clause = $2 || ""
@@ -103,8 +108,8 @@ class LegalToMarkdown
 
       until clauses_to_mixin.size == 0
         clauses_to_mixin.each do | mixin |
-          pattern = /(\[{{#{mixin}}}\s*)(.*?\n?)(\])/m
-          sub_pattern = /(\[{{\S+}})/m
+          pattern = /(\[{{#{mixin}}}\s*?)(.*?\n*?)(\])/m
+          sub_pattern = /\[{{(\S+?)}}\s*?/
           content[pattern]
           get_it_all = $& || ""
           sub_clause = $2 || ""
@@ -114,314 +119,296 @@ class LegalToMarkdown
         end
       end
 
-      return [content, mixins]
+      return [ mixins, content ]
     end
 
-    def normal_mixins( mixins, content )
+    def text_mixins( mixins, content )
       mixins.each do | mixin, replacer |
         unless mixin =~ /level-\d/ or mixin =~ /no-reset/ or mixin =~ /no-indent/
           replacer = replacer.to_s
-          safe_words = [ "title", "author", "date" ]
-          pattern = /({{#{mixin}}})/
-          if content =~ pattern
-            content = content.gsub( $1, replacer )
-            mixins.delete( mixin ) unless safe_words.any?{ |s| s.casecmp(mixin) == 0 }
-          end
+          mixin_pattern = /({{#{mixin}}})/
+          content = content.gsub( $1, replacer ) if content =~ mixin_pattern
+          mixins.delete( mixin )
         end
       end
-      return [content, mixins]
+      return [ mixins, content ]
     end
 
     clauses_mixed = clauses_mixins( mixins, content )
-    mixed = normal_mixins( clauses_mixed[1], clauses_mixed[0] )
-    return [ mixed[0], mixed[1] ]
+    fully_mixed = text_mixins( clauses_mixed[0], clauses_mixed[1] )
+    fully_mixed[1].gsub!(/(\n\n+)/, "\n\n")
+    return [ fully_mixed[0], fully_mixed[1] ]
   end
 
   # ----------------------
   # |      Step 4        |
   # ----------------------
-  # Special YAML fields
-
-  def pandoc_title_block( headers )
-    title_block = ""
-    headers.each do | header |
-      if header[1]
-        if header[0].casecmp("title") == 0
-          title_block << "% " + header[1] + "\n"
-          headers.delete( header )
-        elsif header[0].casecmp("author") == 0
-          title_block << "% " + header[1] + "\n"
-          headers.delete( header )
-        elsif header[0].casecmp("date") == 0
-          title_block << "% " + header[1] + "\n\n"
-          headers.delete( header )
-        end
-      end
-    end
-    return title_block
-  end
-
-  # ----------------------
-  # |      Step 5        |
-  # ----------------------
   # Headers
 
   def headers_on( headers, content )
 
+    def set_the_subs_arrays( value )
+      # takes a core value from the hash pulled from the yaml
+      # returns an array with a type symbol and a precursor string
+      if value =~ /([IVXLCDM]+)\.\z/            # type1 : {{ I. }}
+        return[:type1, value.delete($1 + "."), "", $1, "."]
+      elsif value =~ /\(([IVXLCDM]+)\)\z/       # type2 : {{ (I) }}
+        return[:type2, value.delete("(" + $1 + ")"), "(", $1, ")"]
+      elsif value =~ /([ivxlcdm]+)\.\z/         # type3 : {{ i. }}
+        return[:type3, value.delete($1 + "."), "", $1, "."]
+      elsif value =~ /\(([ivxlcdm]+)\)\z/       # type4 : {{ (i) }}
+        return[:type4, value.delete("(" + $1 + ")"), "(", $1, ")"]
+      elsif value =~ /([A-Z]+)\.\z/     # type5 : {{ A. }}
+        return[:type5, value.delete($1 + "."), "", $1, "."]
+      elsif value =~ /\(([A-Z]+)\)\z/   # type6 : {{ (A) }}
+        return[:type6, value.delete("(" + $1 + ")"), "(", $1, ")"]
+      elsif value =~ /([a-z]+)\.\z/     # type7 : {{ a. }}
+        return[:type7, value.delete($1 + "."), "", $1, "."]
+      elsif value =~ /\(([a-z]+)\)\z/   # type8 : {{ (a) }}
+        return[:type8, value.delete("(" + $1 + ")"), "(", $1, ")"]
+      elsif value =~ /\((\d+)\)\z/      # type9 : {{ (1) }}
+        return[:type9, value.delete("(" + $1 + ")"), "(", $1, ")"]
+      else value =~ /(\d+)\.\z/         # type0 : {{ 1. }} ... also default
+        return[:type0, value.delete($1 + "."), "", $1, "."]
+      end
+    end
+
     def get_the_substitutions( headers )
-      # find the headers in the remaining YAML 
+      # find the headers in the remaining YAML
       # parse out the headers into level-X and pre-X headers
       # then combine them into a coherent package
       # returns a hash with the keys as the l., ll. searches
-      # and the values as the replacements in the form of 
-      # an array where the first value is a symbol and the 
+      # and the values as the replacements in the form of
+      # an array where the first value is a symbol and the
       # second value is the precursor
 
-      def set_the_subs_arrays(value)
-        # takes a core value from the hash pulled from the yaml
-        # returns an array with a type symbol and a precursor string
-        if value =~ /I\.\z/            # type1 : {{ I. }}
-          return[:type1, value[0..-3]]
-        elsif value =~ /\(I\)\z/       # type2 : {{ (I) }}
-          return[:type2, value[0..-4]]
-        elsif value =~ /i\.\z/         # type3 : {{ i. }}
-          return[:type3, value[0..-3]]
-        elsif value =~ /\(i\)\z/       # type4 : {{ (i) }}
-          return[:type4, value[0..-4]]
-        elsif value =~ /[A-Z]\.\z/     # type5 : {{ A. }}
-          return[:type5, value[0..-3]]
-        elsif value =~ /\([A-Z]\)\z/   # type6 : {{ (A) }}
-          return[:type6, value[0..-4]]
-        elsif value =~ /[a-z]\.\z/     # type7 : {{ a. }}
-          return[:type7, value[0..-3]]
-        elsif value =~ /\([a-z]\)\z/   # type8 : {{ (a) }}
-          return[:type8, value[0..-4]]
-        elsif value =~ /\(\d\)\z/      # type9 : {{ (1) }}
-          return[:type9, value[0..-4]]
-        else value =~ /\d\.\z/         # type0 : {{ 1. }} ... also default
-          return[:type0, value[0..-3]]
+      # @substitutions hash example
+      # {"ll." || "l2."=>[:type8, "Article ", "(", "1", ")", :no_reset || nil, "  ", :preval || :pre || nil]}
+
+      @substitutions = {}
+      headers["level-style"] == "l1." ? @deep_leaders = true : @deep_leaders = false
+      if headers.has_key?("no-indent")
+        no_indent_array = headers["no-indent"].split(", ")
+        no_indent_array.include?("l." || "l1.") ? @offset = no_indent_array.size : @offset = no_indent_array.size + 1
+      else
+        @offset = 1
+      end
+
+      headers.each do | header, value |
+        if @deep_leaders
+          search = "l" + header[-1] + "." if header =~ /level-\d/
+        else
+          search = "l" * header[-1].to_i + "." if header =~ /level-\d/
+        end
+
+        if header =~ /level-\d/
+          @substitutions[search]= set_the_subs_arrays(value.to_s)
+          @deep_leaders ? spaces = (search[1].to_i - @offset) : spaces = (search.size - @offset - 1)
+          spaces < 0 ? spaces = 0 : spaces = spaces * 2
+          @substitutions[search][6] = " " * spaces
+          if value =~ /\s*preval\s*/
+            @substitutions[search][1].gsub!(/preval\s*/, "")
+            @substitutions[search][7] = :preval
+          elsif value =~ /\s*pre\s*/
+            @substitutions[search][1].gsub!(/pre\s*/, "")
+            @substitutions[search][7] = :pre
+          end
         end
       end
 
-      substitutions = {}
-      headers.each do | header, value |
-        if value
-          if header =~ /level-\d/
-            level = header[-1].to_i
-            base = "l"
-            search = base * level + "."
-            # substitutions hash example {"ll."=>[:type8,"Article"],}
-            substitutions[search]= set_the_subs_arrays(value.to_s)
-          end
-          if header =~ /no-reset/
-            no_subs_array = value.split(", ")
-            no_subs_array.each{|e| substitutions[e][6] = :no_reset }
-          end
-          @no_indt_array = []
-          if header =~ /no-indent/
-            @no_indt_array = value.split(", ")
-          end
-        end  
-      end
+      no_subs_array = headers["no-reset"].split(", ")
+      no_subs_array.each{ |e| @substitutions[e][5] = :no_reset unless e == "l." || e == "l1."}
 
-      return substitutions
+      return @substitutions
     end
 
     def find_the_block( content )
-      # finds the block of text that will be processed
-      # returns an array with the first element as the block 
-      # to be processed and the second element as the rest of the document
-      if content =~ /(^```\s*\n?)(.*?\n?)(^```\s*\n?)/m
+      block_pattern = /(^```+\s*\n?)(.*?\n?)(^```+\s*\n?)/m
+      parts = content.partition( block_pattern )
+      if parts[1] != ""
         block = $2.chomp
-        content = $PREMATCH + "{{block}}\n" + $POSTMATCH
+        content = parts[0] + "{{block}}" + parts[2]
+      else
+        block = ""
+        content = content
       end
-      return[ block, content ]
+      return [ block, content ]
     end
 
-    def chew_on_the_block( substitutions, block )
+    def chew_on_the_block( old_block )
       # takes a hash of substitutions to make from the #get_the_substitutions method
       # and a block of text returned from the #find_the_block method
       # iterates over the block to make the appropriate substitutions
       # returns a block of text
 
-      def get_the_subs_arrays( value )
-        # returns a new array for the replacements
-        if value[0] == :type1       # :type1 : {{ I. }}
-          value[2..4] = [ "", "I", "." ]
-          return value
-        elsif value[0] == :type2    # :type2 : {{ (I) }}
-          value[2..4] = [ "(", "I", ")"]
-          return value
-        elsif value[0] == :type3    # :type3 : {{ i. }}
-          value[2..4] = [ "", "i", "."]
-          return value
-        elsif value[0] == :type4    # :type4 : {{ (i) }}
-          value[2..4] = [ "(", "i", ")"]
-          return value
-        elsif value[0] == :type5    # :type5 : {{ A. }}
-          value[2..4] = [ "", "A", "."]
-          return value
-        elsif value[0] == :type6    # :type6 : {{ (A) }}
-          value[2..4] = [ "(", "A", ")"]
-          return value
-        elsif value[0] == :type7    # :type7 : {{ a. }}
-          value[2..4] = [ "", "a", "."]
-          return value
-        elsif value[0] == :type8    # :type8 : {{ (a) }}
-          value[2..4] = [ "(", "a", ")"]
-          return value
-        elsif value[0] == :type9    # :type9 : {{ (1) }}
-          value[2..4] = [ "(", "1", ")"]
-          return value
-        else value[0] == :type0     # :type0 : {{ 1. }} ... also default
-          value[2..4] = [ "", 1, "."]
-          return value
-        end
-      end
+      # method will take the old_block and iterate through the lines.
+      # First it will find the leading indicator. Then it will
+      # find the appropriate substitution from the @substitutions
+      # hash. After that it will rebuild the leading matter from the
+      # sub hash. It will drop markers if it is going down the tree.
+      # It will reset the branches if it is going up the tree.
+      # sub_it is an array w/ type[0] & lead_string[1] & id's[2..4]
 
-      def log_the_line( new_block, selector, line, array_to_sub )
-        substitute = array_to_sub[1..4].join
-        spaces = ""
-        unless @no_indt_array.include?(selector)
-          downgrade_spaces = @no_indt_array.include?("l.") ? @no_indt_array.size - 1 : @no_indt_array.size
-          spaces = ( " " * ( (selector.size) - 2 - downgrade_spaces ) * 4 )
-        end
-        line = line.gsub( $1, ( $1 + spaces ) ) if line[/(\n\n)/]
-        new_block << spaces + line.gsub(selector, substitute) + "\n"
-      end
+      # @substitutions hash example
+      # {"ll."OR "l2."=>[:type8, "Article ", "(", "1", ")", :no_reset || nil, :no_indent || nil, :preval || :pre || nil],}
 
-      def increment_the_branch( hash_of_subs, array_to_sub, selector )
-        romans_uppers = [ :type1, :type2 ]
-        romans_lowers = [ :type3, :type4 ]
-        romans = romans_uppers + romans_lowers
-        if romans.any?{ |e| e == array_to_sub[0] }
-          if romans_lowers.any?{ |e| e == array_to_sub[0] }
-            r_l = true
-          else
-            r_u = true
-          end
+      def romans_takedown( array_to_sub )
+        if array_to_sub[0] == :type1 || array_to_sub[0] == :type2
+          @r_u = true
+        elsif array_to_sub[0] == :type3 || array_to_sub[0] == :type4
+          @r_l = true
         end
-        if r_l == true
-          array_to_sub[3] = array_to_sub[3].upcase
+        if @r_l || @r_u
+          array_to_sub[3] = RomanNumerals.to_decimal_string(array_to_sub[3])
         end
-        if r_l == true || r_u == true
-          array_to_sub[3] = RomanNumerals.to_decimal(array_to_sub[3]) 
-        end
-        array_to_sub[3] = array_to_sub[3].next
-        if r_l == true || r_u == true
-          array_to_sub[3] = RomanNumerals.to_roman(array_to_sub[3]) 
-        end
-        if r_l == true
-          array_to_sub[3] = array_to_sub[3].downcase
-        end
-        hash_of_subs[selector]= array_to_sub
-        return hash_of_subs
-      end
-
-      def reset_the_sub_branches( hash_of_subs, array_to_sub, selector )
-        hash_of_subs = increment_the_branch( hash_of_subs, array_to_sub, selector )
-        leaders_to_reset = []
-        hash_of_subs.each_key{ |k| leaders_to_reset << k if k > selector }
-        leaders_to_reset.each do | leader |
-          unless hash_of_subs[leader][6] == :no_reset
-            unless hash_of_subs[leader][5] == :pre
-              hash_of_subs[leader]= get_the_subs_arrays(hash_of_subs[leader])
-            else
-              hash_of_subs[leader]= get_the_subs_arrays(hash_of_subs[leader])
-              hash_of_subs[leader]= pre_setup(hash_of_subs[leader])
-            end
-          end
-        end
-        return hash_of_subs
-      end
-
-      def pre_setup( array_to_sub )
-        array_to_sub[5] = :pre
-        array_to_sub[1] = ""
         return array_to_sub
       end
 
-      def reform_the_block( old_block, substitutions )
-        # method will take the old_block and iterate through the lines.
-        # First it will find the leading indicator. Then it will
-        # find the appropriate substitution from the substitutions 
-        # hash. After that it will rebuild the leading matter from the
-        # sub hash. It will drop markers if it is going down the tree.
-        # It will reset the branches if it is going up the tree. 
-        # sub_it is an array w/ type[0] & lead_string[1] & id's[2..4]
-        new_block = ""
-        leader_before = ""
-        leader_above = ""
-        selector_before = "" 
-        temp_block = []
-        old_block.each_line{ |l| old_block.gsub(l, "") if l[/^\n/] }
-        old_block.each_line do |line|
-          unless temp_block.empty?
-            line[/(^l+.\s)/] ? temp_block << line : temp_block.last << ("\n" + line)
-          else
-            line[/(^l+.\s)/] ? temp_block << line : temp_block << "\n"
-          end
+      def romans_setup( array_to_sub )
+        if @r_l || @r_u
+          array_to_sub[3] = RomanNumerals.to_roman_upper(array_to_sub[3]) if @r_u
+          array_to_sub[3] = RomanNumerals.to_roman_lower(array_to_sub[3]) if @r_l
         end
-        old_block = temp_block
-        temp_block = []
-        old_block.each do | line | 
-          line[/(^l+.\s)/]
-          selector = $1.chop
-          sub_it = substitutions[selector]
-          sub_it[5] = "" if sub_it[5].nil?
-          if sub_it[5] == :pre || sub_it[1] =~ /pre/
-            sub_it = pre_setup(sub_it) 
-            if selector_before < selector     # Going down the tree, into pre
-              leader_above = substitutions[selector_before][1..4].join
-              sub_it[1] = leader_above = leader_before
-            elsif selector_before > selector && substitutions[selector_before][5] == :pre
-              sub_it[1] = leader_above[0..-3]
-            else
-              sub_it[1] = leader_above
-            end
-          end
-          log_the_line( new_block, selector, line, sub_it )
-          leader_before = sub_it[1..4].join
-          if selector_before > selector     # We are going up the tree.
-            substitutions = reset_the_sub_branches(substitutions, sub_it, selector)
-          else                              # We are at the same level.
-            substitutions = increment_the_branch(substitutions, sub_it, selector)
-          end
-          selector_before = selector
-        end
-        return new_block
+        @r_l = false; @r_u = false
+        return array_to_sub
       end
 
-      substitutions.each_key{ |k| substitutions[k]= get_the_subs_arrays(substitutions[k]) }
-      new_block = reform_the_block( block, substitutions )
+      def increment_the_branch( array_to_sub, selector, next_selector )
+        if selector > next_selector                                         #going up the tree and reset
+          selectors_to_reset = @substitutions.inject([]){ |m,(k,v)| m << k if k > next_selector; m }
+          selectors_to_reset.each do | this_selector |
+            substitutor = @substitutions[this_selector]
+            substitutor = romans_takedown( substitutor )
+            substitutor[3].next! if this_selector == selector
+            if substitutor[0] == :type5 || substitutor[0] == :type6
+              substitutor[3] = "A" unless substitutor[5] == :no_reset
+            elsif substitutor[0] == :type7 || substitutor[0] == :type8
+              substitutor[3] = "a" unless substitutor[5] == :no_reset
+            else
+              substitutor[3] = "1" unless substitutor[5] == :no_reset
+            end
+            substitutor = romans_setup( substitutor )
+            @substitutions[this_selector]= substitutor
+          end
+          array_to_sub = @substitutions[selector]
+        else                                                                #not going up tree
+          array_to_sub = romans_takedown( array_to_sub )
+          array_to_sub[3].next!
+          array_to_sub = romans_setup( array_to_sub )
+        end
+
+        return array_to_sub
+      end
+
+      def get_selector_above( selector )
+        if @deep_leaders
+          selector_above = "l" + (selector[1].to_i-1).to_s + "."
+          selector_above = "l1." if selector_above == "l0."
+        else
+          selector_above = selector[1..-1]
+          selector_above = "l." if selector_above == "."
+        end
+        return selector_above
+      end
+
+      def find_parent_reference( selector_above )
+        leading_prov = @substitutions[selector_above].clone
+        leading_prov = romans_takedown( leading_prov )
+        if leading_prov[0] == :type5 || leading_prov[0] == :type6
+          leading_prov[3] = leading_prov[3][0..-2] + (leading_prov[3][-1].ord-1).chr
+        elsif leading_prov[0] == :type7 || leading_prov[0] == :type8
+          leading_prov[3] = leading_prov[3][0..-2] + (leading_prov[3][-1].ord-1).chr
+        else
+          leading_prov[3] = (leading_prov[3].to_i-1).to_s
+        end
+        leading_prov = romans_setup( leading_prov )
+        return leading_prov
+      end
+
+      def preval_substitution( array_to_sub, selector )
+        array_to_sub.pop unless array_to_sub.last == :preval
+        selector_above = get_selector_above( selector )
+        leading_prov = find_parent_reference( selector_above )[3]
+        trailing_prov = array_to_sub[3].clone
+        trailing_prov.prepend("0") if trailing_prov.size == 1
+        array_to_sub << array_to_sub[2] + leading_prov.to_s + trailing_prov.to_s + array_to_sub[4]
+        array_to_sub.last.gsub!($1, "(") if array_to_sub.last[/(\.\()/]
+        return array_to_sub
+      end
+
+      def pre_substitution( array_to_sub, selector )
+        array_to_sub.pop unless array_to_sub.last == :pre
+        selector_above = get_selector_above( selector )
+        leading_prov = @substitutions[selector_above][8] || find_parent_reference( selector_above )[2..4].join
+        trailing_prov = array_to_sub[2..4].join
+        array_to_sub << leading_prov + trailing_prov
+        array_to_sub.last.gsub!($1, "(") if array_to_sub.last[/(\.\()/]
+        return array_to_sub
+      end
+
+      cross_references = {}
+      arrayed_block = []
+      old_block.each_line do |line|
+        next if line[/^\s*\n/]
+        line[/(^l+\.)\s*(\|.*?\|)*\s*(.*)$/] ? arrayed_block << [$1, $3, $2] : arrayed_block.last[1] << ("\n" + line.rstrip)
+      end
+      old_block = ""                        # for large files
+
+      new_block = arrayed_block.inject("") do |block, arrayed_line|
+
+        selector = arrayed_line[0]
+        next_selector = ( arrayed_block[arrayed_block.index(arrayed_line)+1] || arrayed_block.last ).first
+        sub_it = @substitutions[selector]
+
+        if arrayed_line[1] =~ /\n/
+          arrayed_line[1].gsub!("\n", "\n\n" + sub_it[6])
+        end
+
+        if sub_it[7] == :preval
+          sub_it = preval_substitution(sub_it, selector)
+          reference = sub_it.last
+        elsif sub_it[7] == :pre
+          sub_it = pre_substitution(sub_it, selector)
+          reference = sub_it.last
+        else
+          reference = sub_it[2..4].join
+        end
+
+        block << sub_it[6] + sub_it[1] + reference + " " + arrayed_line[1] + "\n\n"
+        cross_references[arrayed_line[2]]= sub_it[1] + reference if arrayed_line[2]
+        @substitutions[selector]= increment_the_branch(sub_it, selector, next_selector)
+
+        block
+      end
+
+      cross_references.each_key{|k| new_block.gsub!(k, cross_references[k]) }
+      return new_block
     end
 
     headers = get_the_substitutions( headers )
-    block_noted = find_the_block( content )
-    block = block_noted[0]
-    not_the_block = block_noted[1]
-    block_noted = ""   # Really only for long documents so they don't use too much memory
+    block_found = find_the_block( content )
+    block = block_found[0]
+    not_the_block = block_found[1]
+    block_found = ""                                                        # for long documents
 
-    if block == nil || block == ""
+    if block == ""
       block_redux = ""
-    elsif headers == {} 
+    elsif headers == {}
       block_redux = block
     else
-      block_redux = chew_on_the_block( headers, block )
+      block_redux = chew_on_the_block( block )
     end
-
-    headed = not_the_block.gsub("{{block}}", block_redux ) 
+    headed = not_the_block.gsub("{{block}}", block_redux )
   end
 
   # ----------------------
   # |      Step 6        |
   # ----------------------
-  # Write the file 
-
+  # Write the file
   def write_it( final_content )
     if @output_file && @output_file != "-"
       File.open(@output_file, "w") {|f| f.write( final_content ) }
-    else 
+    else
       STDOUT.write final_content
     end
   end

@@ -82,7 +82,7 @@
 			<key>comment</key>
 			<string>for questions in ...?ASK?...</string>
 			<key>match</key>
-			<string>\.\.\.\?.*?\?\.\.\.</string>
+			<string>\|.*?\|</string>
 			<key>name</key>
 			<string>constant</string>
 		</dict>

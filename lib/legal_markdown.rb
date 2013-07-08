@@ -33,7 +33,7 @@ class LegalToMarkdown
     @output_file = ARGV[-1]
     @input_file = ARGV[-2] ? ARGV[-2] : ARGV[-1]
     begin
-      if @output_file != "-" && @input_file != "-"
+      if @input_file != "-"
         source_file = File::read(@input_file) if File::exists?(@input_file) && File::readable?(@input_file)
       elsif @input_file == "-"
         source_file = STDIN.read
@@ -58,6 +58,11 @@ class LegalToMarkdown
 
   def parse_file(source)
     begin
+      if source[/@today/]
+        require 'date'
+        d = Date.today.strftime("%-d %B, %Y")
+        source.gsub!($&, d)
+      end
       yaml_pattern = /\A(---\s*\n.*?\n?)^(---\s*$\n?)/m
       parts = source.partition( yaml_pattern )
       if parts[1] != ""
@@ -114,7 +119,7 @@ class LegalToMarkdown
           get_it_all = $& || ""
           sub_clause = $2 || ""
           next if sub_clause[sub_pattern] && clauses_to_mixin.include?($1)
-          content = content.gsub( get_it_all, sub_clause )
+          content = content.gsub( get_it_all, sub_clause.lstrip )
           clauses_to_mixin.delete( mixin ) unless content[pattern]
         end
       end
@@ -216,8 +221,10 @@ class LegalToMarkdown
         end
       end
 
-      no_subs_array = headers["no-reset"].split(", ")
-      no_subs_array.each{ |e| @substitutions[e][5] = :no_reset unless e == "l." || e == "l1."}
+      if headers["no-reset"]
+        no_subs_array = headers["no-reset"].split(", ")
+        no_subs_array.each{ |e| @substitutions[e][5] = :no_reset unless e == "l." || e == "l1."}
+      end
 
       return @substitutions
     end

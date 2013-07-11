@@ -13,12 +13,44 @@
 	<key>patterns</key>
 	<array>
 		<dict>
+			<key>begin</key>
+			<string>(?&lt;!\s)---\n$</string>
+			<key>end</key>
+			<string>^---\s</string>
+			<key>name</key>
+			<string>markup.raw.yaml.front-matter</string>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>include</key>
+					<string>source.yaml</string>
+				</dict>
+			</array>
+		</dict>
+		<dict>
+			<key>begin</key>
+			<string>^(l\.|#\s*)</string>
+			<key>beginCaptures</key>
+			<dict>
+				<key>1</key>
+				<dict>
+					<key>name</key>
+					<string>entity.name.type.class</string>
+				</dict>
+			</dict>
 			<key>comment</key>
 			<string>level 1 headers and structured headers</string>
-			<key>match</key>
-			<string>^(l\.|#\s*).*$</string>
+			<key>end</key>
+			<string>$</string>
 			<key>name</key>
 			<string>entity.name.type.class</string>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>include</key>
+					<string>$self</string>
+				</dict>
+			</array>
 		</dict>
 		<dict>
 			<key>comment</key>
@@ -37,19 +69,11 @@
 			<string>entity.name.function</string>
 		</dict>
 		<dict>
-			<key>captures</key>
+			<key>begin</key>
+			<string>(\[\{\{.+?\}\})</string>
+			<key>beginCaptures</key>
 			<dict>
 				<key>1</key>
-				<dict>
-					<key>name</key>
-					<string>string.quoted</string>
-				</dict>
-				<key>2</key>
-				<dict>
-					<key>name</key>
-					<string>variable.language</string>
-				</dict>
-				<key>3</key>
 				<dict>
 					<key>name</key>
 					<string>string.quoted</string>
@@ -57,10 +81,31 @@
 			</dict>
 			<key>comment</key>
 			<string>optional clauses</string>
-			<key>match</key>
-			<string>(\[\{\{.+?\}\})(.+?)(\])</string>
+			<key>end</key>
+			<string>(\])</string>
+			<key>endCaptures</key>
+			<dict>
+				<key>1</key>
+				<dict>
+					<key>name</key>
+					<string>string.quoted</string>
+				</dict>
+			</dict>
 			<key>name</key>
 			<string>text.html.markdown.legalmarkdown</string>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>include</key>
+					<string>$self</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>.</string>
+					<key>name</key>
+					<string>variable.language</string>
+				</dict>
+			</array>
 		</dict>
 		<dict>
 			<key>captures</key>
@@ -80,9 +125,9 @@
 		</dict>
 		<dict>
 			<key>comment</key>
-			<string>for questions in ...?ASK?...</string>
+			<string>cross references</string>
 			<key>match</key>
-			<string>\|.*?\|</string>
+			<string>(\|.*?\|)</string>
 			<key>name</key>
 			<string>constant</string>
 		</dict>

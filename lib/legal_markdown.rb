@@ -12,12 +12,13 @@ class LegalToMarkdown
     elsif ARGV.include?("--headers")
       MakeYamlFrontMatter.new(ARGV)
     else
-      LegalToMarkdown.new(ARGV)
+      args = ARGV.dup
+      LegalToMarkdown.new(args)
     end
   end # main
 
-  def initialize(*args)
-    data = load(*args)                                              # Get the Content
+  def initialize(args)
+    data = load(args)                                              # Get the Content
     parsed_content = parse_file(data)                               # Load the YAML front matter
     mixed_content = mixing_in(parsed_content[0], parsed_content[1]) # Run the Mixins
     headed_content = headers_on(mixed_content[0], mixed_content[1]) # Run the Headers
@@ -29,9 +30,9 @@ class LegalToMarkdown
   # |      Step 1        |
   # ----------------------
   # Parse Options & Load File
-  def load(*args)
-    @output_file = ARGV[-1]
-    @input_file = ARGV[-2] ? ARGV[-2] : ARGV[-1]
+  def load(args)
+    @output_file = args[-1]
+    @input_file = args[-2] ? args[-2] : args[-1]
     begin
       if @input_file != "-"
         source_file = File::read(@input_file) if File::exists?(@input_file) && File::readable?(@input_file)
@@ -100,12 +101,17 @@ class LegalToMarkdown
 
       until clauses_to_delete.size == 0
         clauses_to_delete.each do | mixin |
-          pattern = /(\[{{#{mixin}}}\s*?)(.*?\n*?)(\])/m
-          sub_pattern = /\[{{(\S+?)}}\s*?/
+          pattern = /(\[\{\{#{mixin}\}\}\s*?)(.*?\n*?)(\])/m
+          sub_pattern = /\[\{\{(\S+?)\}\}\s*?/
           content[pattern]
           get_it_all = $& || ""
           sub_clause = $2 || ""
-          next if sub_clause[sub_pattern] && clauses_to_delete.include?($1)
+          if sub_clause[sub_pattern] && clauses_to_delete.include?($1)
+            next
+          elsif sub_clause[sub_pattern]
+            pattern = /\[\{\{#{mixin}\}\}\s*?.*?\n*?\].*?\n*?\]/m
+            content[pattern]; get_it_all = $& || ""
+          end
           content = content.gsub( get_it_all, "" )
           clauses_to_delete.delete( mixin ) unless content[pattern]
         end
@@ -113,8 +119,8 @@ class LegalToMarkdown
 
       until clauses_to_mixin.size == 0
         clauses_to_mixin.each do | mixin |
-          pattern = /(\[{{#{mixin}}}\s*?)(.*?\n*?)(\])/m
-          sub_pattern = /\[{{(\S+?)}}\s*?/
+          pattern = /(\[\{\{#{mixin}\}\}\s*?)(.*?\n*?)(\])/m
+          sub_pattern = /\[\{\{(\S+?)\}\}\s*?/
           content[pattern]
           get_it_all = $& || ""
           sub_clause = $2 || ""
@@ -129,9 +135,9 @@ class LegalToMarkdown
 
     def text_mixins( mixins, content )
       mixins.each do | mixin, replacer |
-        unless mixin =~ /level-\d/ or mixin =~ /no-reset/ or mixin =~ /no-indent/
+        unless mixin =~ /level-\d/ or mixin =~ /no-reset/ or mixin =~ /no-indent/ or mixin =~ /level-style/
           replacer = replacer.to_s
-          mixin_pattern = /({{#{mixin}}})/
+          mixin_pattern = /(\{\{#{mixin}\}\})/
           content = content.gsub( $1, replacer ) if content =~ mixin_pattern
           mixins.delete( mixin )
         end
@@ -142,6 +148,7 @@ class LegalToMarkdown
     clauses_mixed = clauses_mixins( mixins, content )
     fully_mixed = text_mixins( clauses_mixed[0], clauses_mixed[1] )
     fully_mixed[1].gsub!(/(\n\n+)/, "\n\n")
+    fully_mixed[1].squeeze!(" ")
     return [ fully_mixed[0], fully_mixed[1] ]
   end
 
@@ -191,8 +198,14 @@ class LegalToMarkdown
       # {"ll." || "l2."=>[:type8, "Article ", "(", "1", ")", :no_reset || nil, "  ", :preval || :pre || nil]}
 
       @substitutions = {}
-      headers["level-style"] == "l1." ? @deep_leaders = true : @deep_leaders = false
-      if headers.has_key?("no-indent")
+
+      if headers.has_key?("level-style")
+        headers["level-style"] =~ /l1/ ? @deep_leaders = true : @deep_leaders = false
+      else
+        @deep_leaders = false
+      end
+
+      if headers.has_key?("no-indent") && headers["no-indent"]
         no_indent_array = headers["no-indent"].split(", ")
         no_indent_array.include?("l." || "l1.") ? @offset = no_indent_array.size : @offset = no_indent_array.size + 1
       else
@@ -337,7 +350,7 @@ class LegalToMarkdown
         selector_above = get_selector_above( selector )
         leading_prov = find_parent_reference( selector_above )[3]
         trailing_prov = array_to_sub[3].clone
-        trailing_prov.prepend("0") if trailing_prov.size == 1
+        trailing_prov = "0" + trailing_prov if trailing_prov.size == 1
         array_to_sub << array_to_sub[2] + leading_prov.to_s + trailing_prov.to_s + array_to_sub[4]
         array_to_sub.last.gsub!($1, "(") if array_to_sub.last[/(\.\()/]
         return array_to_sub
@@ -357,7 +370,7 @@ class LegalToMarkdown
       arrayed_block = []
       old_block.each_line do |line|
         next if line[/^\s*\n/]
-        line[/(^l+\.)\s*(\|.*?\|)*\s*(.*)$/] ? arrayed_block << [$1, $3, $2] : arrayed_block.last[1] << ("\n" + line.rstrip)
+        line[/(^l+\.|^l\d\.)\s*(\|.*?\|)*\s*(.*)$/] ? arrayed_block << [$1, $3, $2] : arrayed_block.last[1] << ("\n" + line.rstrip)
       end
       old_block = ""                        # for large files
 
@@ -416,7 +429,7 @@ class LegalToMarkdown
   # ----------------------
   # Write the file
   def write_it( final_content )
-    final_content = final_content.squeeze(" ")
+    final_content = final_content.gsub(/ +\n/, "\n")
     if @output_file && @output_file != "-"
       File.open(@output_file, "w") {|f| f.write( final_content ) }
     else

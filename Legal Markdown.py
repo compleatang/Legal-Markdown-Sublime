@@ -16,7 +16,7 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
   def yamlize_buffer(self):
     working_dir = os.path.dirname(self.view.file_name())
     body = self.active_view.substr(self.buffer_region)
-    yamlizer = subprocess.Popen(self.cmd(), shell=True, cwd=working_dir, 
+    yamlizer = subprocess.Popen(self.cmd(), shell=True, cwd=working_dir,
       stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     out = yamlizer.communicate(body.encode("utf-8"))[0].decode('utf8')
     if (out == "" and body != ""):
@@ -44,7 +44,7 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
 
   def cmd(self, path = "-"):
     ruby_interpreter = self.settings.get('ruby') or "/usr/bin/env ruby"
-    ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'lib', 'legal_markdown.rb')
+    ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'legal_markdown.rb')
     args = [ "--headers", "'" + unicode(path) + "'"]
     command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
     return command
@@ -54,14 +54,14 @@ class LegalMarkdownToNormalMarkdown(sublime_plugin.WindowCommand):
     self.settings = sublime.load_settings('LegalMarkdown.sublime-settings')
     self.active_view = self.window.active_view()
     self.buffer_region = sublime.Region(0, self.active_view.size())
-    self.window.show_input_panel("Save to:", str(self.get_current_file()), 
+    self.window.show_input_panel("Save to:", str(self.get_current_file()),
       self.on_input, None, None)
 
   def on_input(self, output_file):
     output_file = str(output_file)
     working_dir = os.path.dirname(self.get_current_file())
     body = self.active_view.substr(self.buffer_region)
-    mdizr = subprocess.Popen(self.cmd(output_file), shell=True, cwd=working_dir, 
+    mdizr = subprocess.Popen(self.cmd(output_file), shell=True, cwd=working_dir,
       stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     out = mdizr.communicate(body.encode("utf-8"))[0].decode('utf8')
     if (out != "" and body != ""):
@@ -71,7 +71,7 @@ class LegalMarkdownToNormalMarkdown(sublime_plugin.WindowCommand):
 
   def cmd(self, output_file):
     ruby_interpreter = self.settings.get('ruby-path') or "/usr/bin/env ruby"
-    ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'lib', 'legal_markdown.rb')
+    ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'legal_markdown.rb')
     args = ["-", "'" + output_file + "'"]
     command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
     return command
@@ -166,7 +166,7 @@ class LegalMarkdownExport(sublime_plugin.WindowCommand):
 
     def mdizer(self, contents):
         ruby_interpreter = os.path.join(self.get_the_settings('ruby-path')) or "/usr/bin/env ruby"
-        ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'lib', 'legal_markdown.rb')
+        ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'legal_markdown.rb')
         args = ["-", "-"]
         md_command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
         mdizr = subprocess.Popen(md_command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)

@@ -43,8 +43,8 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
     self.region = sublime.Region(target)
 
   def cmd(self, path = "-"):
-    ruby_interpreter = self.settings.get('ruby') or "/usr/bin/env ruby"
-    ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'legal_markdown.rb')
+    ruby_interpreter = self.settings.get('ruby-path') or "/usr/bin/env ruby"
+    ruby_script = os.path.join(sublime.packages_path(), "Legal Document Creator", 'legal_markdown.rb')
     args = [ "--headers", "'" + unicode(path) + "'"]
     command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
     return command
@@ -71,7 +71,7 @@ class LegalMarkdownToNormalMarkdown(sublime_plugin.WindowCommand):
 
   def cmd(self, output_file):
     ruby_interpreter = self.settings.get('ruby-path') or "/usr/bin/env ruby"
-    ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'legal_markdown.rb')
+    ruby_script = os.path.join(sublime.packages_path(), "Legal Document Creator", 'legal_markdown.rb')
     args = ["-", "'" + output_file + "'"]
     command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
     return command
@@ -166,7 +166,7 @@ class LegalMarkdownExport(sublime_plugin.WindowCommand):
 
     def mdizer(self, contents):
         ruby_interpreter = os.path.join(self.get_the_settings('ruby-path')) or "/usr/bin/env ruby"
-        ruby_script = os.path.join(sublime.packages_path(), "Legal Markdown", 'legal_markdown.rb')
+        ruby_script = os.path.join(sublime.packages_path(), "Legal Document Creator", 'legal_markdown.rb')
         args = ["-", "-"]
         md_command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
         mdizr = subprocess.Popen(md_command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)

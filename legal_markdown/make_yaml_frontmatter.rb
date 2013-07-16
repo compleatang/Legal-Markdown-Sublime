@@ -3,16 +3,16 @@ require 'yaml'
 
 class MakeYamlFrontMatter
 
-  def initialize(*args)
-    find_yaml_if_yaml(load(*args))
+  def initialize(args)
+    find_yaml_if_yaml(load(args))
     scan_and_filter_yaml
     build_new_yaml_frontmatter unless @yaml_data_as_array == [{},{},{},{}]
     write_it
   end
 
-  def load(*args)
+  def load(args)
     begin
-      @file = ARGV[-1]
+      @file = args[-1]
       if @file != "-"
         source_file = File::read(@file) if File::exists?(@file) && File::readable?(@file)
       else
@@ -32,18 +32,14 @@ class MakeYamlFrontMatter
   end
 
   def find_yaml_if_yaml( source )
-    begin
-      yaml_pattern = /\A(---\s*\n.*?\n?)^(---\s*$\n?)/m
-      parts = source.partition( yaml_pattern )
-      if parts[1] != ""
-        @headers = YAML.load(parts[1])
-        @content = parts[2]
-      else
-        @headers = {}
-        @content = source
-      end
-    rescue => e
-      puts "Sorry, something went wrong when I was loading the YAML front matter: #{e.message}."
+    yaml_pattern = /\A(---\s*\n.*?\n?)^(---\s*$\n?)/m
+    parts = source.partition( yaml_pattern )
+    if parts[1] != ""
+      @headers = YAML.load(parts[1])
+      @content = parts[2]
+    else
+      @headers = {}
+      @content = source
     end
   end
 
@@ -59,7 +55,7 @@ class MakeYamlFrontMatter
   end
 
   def build_new_yaml_frontmatter
-    @content.prepend("\n---\n\n")
+    @content = "\n---\n\n" + @content
     replacers = {0=>"Mixins", 1=>"Optional Clauses", 2=>"Structured Headers", 3=>"Properties"}
     stringy = @yaml_data_as_array.inject("") do |string, section|
       unless section.empty?
@@ -68,8 +64,8 @@ class MakeYamlFrontMatter
       end
       string
     end
-    @content.prepend(stringy)
-    @content.prepend("---\n")
+    @content = stringy + @content
+    @content = "---\n" + @content
   end
 
   def write_it

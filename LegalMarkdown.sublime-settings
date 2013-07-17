@@ -1,34 +1,34 @@
 {
-  "ruby-path": "/usr/bin/env ruby",
-  "pandoc-path": "/usr/local/bin", 
-  "file_patterns": [ "\\.md", "\\.lmd", "\\.markdown", "\\.legalmarkdown" ],
-  
+  "ruby-path": "/usr/bin/env ruby",  // this should be the full path, INCLUDING the executable
+  "pandoc-path": "/usr/local/bin",   // this should be the full pack, EXCLUDING the executable
+  "file_patterns": [ "\\.lmd", "\\.legalmarkdown" ],
+
   "build-formats": {
-    "Standard ODT": { 
+    "Standard ODT": {
       "from": ["markdown+fancy_lists+startnum"],
       "to": ["odt", "--reference-odt", "~/.pandoc/reference.odt"],
       "options": ["-S", "--no-wrap"],
       "file-output": "true"
     }
-    // 
+    //
     // Build formats can add any of Pandoc's options.
     // Just add in the options you want to the array.
     // Above is a fairly standard ODT output and
     // Below is a more customized version.
-    // 
-    // The "from" flags in both of these examples use the +/- 
-    // extension syntax that only works with > pandoc -v 1.10. 
-    // So if you have pandoc -v 1.09 or less then you will need 
+    //
+    // The "from" flags in both of these examples use the +/-
+    // extension syntax that only works with > pandoc -v 1.10.
+    // So if you have pandoc -v 1.09 or less then you will need
     // to take out the +/- extension flags.
-    // 
+    //
     // If file-output is "true" then the -o flag will
     // be used with Pandoc using the filename of the lmd
     // file and the first element of the "to" array as the
     // file extension.
-    // 
+    //
     // If the "open-file-after-build" is used then the file
     // will be opened with the command given after it is built.
-    // 
+    //
     // "Memo": {
     //   "from": ["markdown+fancy_lists+startnum"],
     //   "to": ["odt", "--reference-odt", "~/.pandoc/memo.odt"],

@@ -7,7 +7,6 @@
 		<string>mdown</string>
 		<string>markdown</string>
 		<string>markdn</string>
-		<string>md.hbs</string>
 		<string>md</string>
 	</array>
 	<key>foldingStartMarker</key>
@@ -25,7 +24,7 @@
 	<key>keyEquivalent</key>
 	<string>^~M</string>
 	<key>name</key>
-	<string>Markdown Extended</string>
+	<string>Extended Markdown</string>
 	<key>patterns</key>
 	<array>
 		<dict>

@@ -45,8 +45,9 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
   def cmd(self, path = "-"):
     ruby_interpreter = self.settings.get('ruby-path') or "/usr/bin/env ruby"
     ruby_script = os.path.join(sublime.packages_path(), "Legal Document Creator", "lib", 'legal_markdown.rb')
-    args = [ "--headers", "'" + unicode(path) + "'"]
+    args = ["--headers", "-", "-"]
     command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
+    print command
     return command
 
 class LegalMarkdownToNormalMarkdown(sublime_plugin.WindowCommand):

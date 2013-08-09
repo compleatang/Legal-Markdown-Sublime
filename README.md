@@ -4,23 +4,29 @@ This package is meant to help build legal documents in Sublime. There are two co
 
 * Automate the building of the `lmd` YAML Front Matter
 * Build `lmd` files to regular `md`
-* Build `lmd` files to any format Pandoc handles. 
+* Build `lmd` files to any format Pandoc handles.
 
-The package is opinionated in that I prefer to use [Pandoc](http://johnmacfarlane.net/pandoc/), along with my [Legal Markdown Gem](https://github.com/compleatang/legal-markdown) to forumlate documents using the full range of pandoc's features. The package uses the Gem as a prepocessor and Pandoc as the primary processor. To make it easier for those who may not want to install the gem, the ruby files have been extracted into the package as standalone ruby files so there is no need to install the gem if you simply include the package. Indeed the package will rely upon the ruby files included and will not call the gem even if you have it installed on your system. 
+The package is opinionated in that I prefer to use [Pandoc](http://johnmacfarlane.net/pandoc/), along with my [Legal Markdown Gem](https://github.com/compleatang/legal-markdown) to forumlate documents using the full range of pandoc's features. The package uses the Gem as a prepocessor and Pandoc as the primary processor. To make it easier for those who may not want to install the gem, the ruby files have been extracted into the package as standalone ruby files so there is no need to install the gem if you simply include the package. Indeed the package will rely upon the ruby files included and will not call the gem even if you have it installed on your system.
 
 If you do not want to use pandoc you can still use the rest of the package without any problem, if you have ruby on your system.
 
 # Dependencies
 
-You will need to have both ruby and pandoc installed and in your PATH for this Package to work fully. If you have a non-standard ruby or pandoc install, for instance if you have installed pandoc from cabal, then just type `which pandoc` to the command line and copy the output (without the pandoc portion) to the `pandoc-path` in your User Settings for the Legal Markdown package (Preferences->Package Settings->Legal Markdown->Settings - User). Similarly for ruby, but if you have used rvm or have a system installed ruby it should work fine. 
+You will need to have both ruby and pandoc installed and in your PATH for this Package to work fully. If you have a non-standard ruby or pandoc install, for instance if you have installed pandoc from cabal, then just type `which pandoc` to the command line and copy the output (without the pandoc portion) to the `pandoc-path` in your User Settings for the Legal Markdown package (Preferences->Package Settings->Legal Markdown->Settings - User).
+
+Similarly for ruby, but if you have used rvm or have a system installed ruby it should work fine. If it does not work directly, then from the command line just type `which ruby` (or on windows `where ruby`) that will return the ruby executable. Paste the output from that command into the User Settings file. If you are running Sublime for Windows, you will need to escape the backslashes so the Settings file will look something like this:
+
+```json
+"ruby-path": "C:\\Path\\To\\Ruby\\bin\\ruby.exe",
+```
 
 # Using
 
 ## Step 1 - Build the YAML Front Matter
 
-The Package assists you to build legal document templates using optional clauses, mixins, and structured headers according to the format established in the `legal_markdown` [gem](https://github.com/compleatang/legal-markdown). 
+The Package assists you to build legal document templates using optional clauses, mixins, and structured headers according to the format established in the `legal_markdown` [gem](https://github.com/compleatang/legal-markdown).
 
-I find this a lifesaver on long templates -- particularly when I've changed some of the provisions deep in the document. To build the YAML Front Matter simply open Command Pallette and find "Legal Markdown - Make YAML Front Matter". That's it. I currently have a default key binding of `ctrl+shift+l` followed by `ctrl+shift+y` that will also run the command. 
+I find this a lifesaver on long templates -- particularly when I've changed some of the provisions deep in the document. To build the YAML Front Matter simply open Command Pallette and find "Legal Markdown - Make YAML Front Matter". That's it. I currently have a default key binding of `ctrl+shift+l` followed by `ctrl+shift+y` that will also run the command.
 
 ## Step 2a - Parse Legal Markdown to Create Normal Markdown
 
@@ -28,7 +34,7 @@ After you have worked on your template, forked it or whatever, you can easily pa
 
 ## Step 2b - Parse Legal Markdown to Create a DOCX, ODT, PDF, etc. with Pandoc
 
-This package integrates Pandoc. The way I have integrated pandoc is slightly different than other pandoc integrations for Sublime. The other integrations are perfectly competent for their purposes, but I wanted to build something that was more tightly integrated. 
+This package integrates Pandoc. The way I have integrated pandoc is slightly different than other pandoc integrations for Sublime. The other integrations are perfectly competent for their purposes, but I wanted to build something that was more tightly integrated.
 
 The philosophy of this package's pandoc integration is to define document types (client memos, internal research memos, transactional contracts, corporate governance, whatever you use) in the settings and then when you want to export a `lmd` file just to select that document type. So here's how you do that.
 
@@ -44,7 +50,7 @@ Go to Preferences -> Package Settings -> Legal Markdown -> Settings - Default. C
       "open-file-after-build": "libreoffice"                    // Command to open the document with. Delete field if you don't want to automatically open the file.
     }
 }
-``` 
+```
 
 # Installation
 

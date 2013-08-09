@@ -1,5 +1,6 @@
 {
   "ruby-path": "/usr/bin/env ruby",  // this should be the full path, INCLUDING the executable
+  // for-windows: "ruby-path": "C:\\Path\\To\\Ruby\\bin\\ruby.exe", // this should be the full path, INCLUDING the executable
   "pandoc-path": "/usr/local/bin",   // this should be the full pack, EXCLUDING the executable
   "file_patterns": [ "\\.lmd", "\\.legalmarkdown" ],
 

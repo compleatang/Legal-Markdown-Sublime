@@ -30,58 +30,33 @@ module LegalToMarkdown
   end
 
   def parse_controller source
-    verbose_after_load source if @verbose
+    verbose_after_process source, 'loading'
     source.run_mixins if source.mixins
-    verbose_after_mixins source if @verbose
+    verbose_after_process source, 'mixins'
     source.run_leaders if source.leaders
-    verbose_after_leaders source if @verbose
+    verbose_after_process source, 'headers'
     source.build_jason if source.writer == :jason
     write_it(source.content, source.writer)
   end
 
-  def verbose_after_load source
-    puts
-    puts
-    puts Paint["Here's what I found after loading.", :blue, :bold]
-    puts Paint['==================================', :blue]
-    puts
-    puts Paint["The Headers I found are:", :green, :bold]
-    puts Paint['------------------------', :green]
-    puts Paint[(source.headers), :magenta]
-    puts
-    puts Paint["The Content I found is:", :green, :bold]
-    puts Paint['-----------------------', :green]
-    puts Paint[(source.content), :yellow]
-    puts
-    puts Paint["There are MIXINS to be parsed.", :red, :bold] if source.mixins
-    puts Paint["There are STRUCTURED HEADERS to be parsed.", :red, :bold] if source.leaders
-  end
-
-  def verbose_after_mixins source
-    puts
-    puts Paint["Here's what I found after the mixins.", :blue, :bold]
-    puts Paint['=====================================', :blue]
-    puts
-    puts Paint["The Headers I found are:", :green, :bold]
-    puts Paint['------------------------', :green]
-    puts Paint[(source.headers), :magenta]
-    puts
-    puts Paint["The Content I found is:", :green, :bold]
-    puts Paint['-----------------------', :green]
-    puts Paint[(source.content), :yellow]
-  end
-
-  def verbose_after_leaders source
-    puts
-    puts Paint["Here's what I found after the headers.", :blue, :bold]
-    puts Paint['=====================================', :blue]
-    puts
-    puts Paint["The Headers I found are:", :green, :bold]
-    puts Paint['------------------------', :green]
-    puts Paint[(source.headers), :magenta]
-    puts
-    puts Paint["The Content I found is:", :green, :bold]
-    puts Paint['-----------------------', :green]
-    puts Paint[(source.content), :yellow]
+  def verbose_after_process source, action
+    if @verbose
+      puts
+      puts Paint["Here's what I found after running the #{action}.", :blue, :bold]
+      puts Paint['=============================================', :blue]
+      puts
+      puts Paint["The Headers I found are:", :green, :bold]
+      puts Paint['------------------------', :green]
+      puts Paint[(source.headers), :magenta]
+      puts
+      puts Paint["The Content I found is:", :green, :bold]
+      puts Paint['-----------------------', :green]
+      puts Paint[(source.content), :yellow]
+      if action == 'loading'
+        puts
+        puts Paint["There are MIXINS to be parsed.", :red, :bold] if source.mixins
+        puts Paint["There are STRUCTURED HEADERS to be parsed.", :red, :bold] if source.leaders
+      end
+    end
   end
 end

@@ -6,7 +6,7 @@ module LegalToMarkdown
     attr_accessor :headers, :content, :mixins, :leaders, :writer
 
     def initialize(file, output)
-      @input_file = file; @headers = nil; @content = ""; @writer = output.to_sym
+      @input_file = file; @headers = nil; @content = ""; @writer = output
       load; get_the_partials; parse; set_the_parsers
     end
 
@@ -41,6 +41,7 @@ module LegalToMarkdown
       yaml_pattern = /\A(---\s*\n.*?\n?)^(---\s*$\n?)/m
       parts = @content.partition yaml_pattern
       if parts[1] != ""
+        parts[1] = string_guard parts[1]
         @headers = YAML.load parts[1]
         @content = parts[2]
       end
@@ -73,6 +74,13 @@ module LegalToMarkdown
       require 'date'
       d = Date.today.strftime("%-d %B, %Y")
       @content.gsub!(/@today/, d)
+    end
+
+    def string_guard strings
+      if strings =~ /(:\s*(\d+\.))$/
+        strings = strings.gsub($1, ": \"" + $2 + "\"" )
+      end
+      strings
     end
   end
 end

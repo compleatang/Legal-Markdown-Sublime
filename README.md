@@ -1,5 +1,7 @@
 # Introduction
 
+*Tested in ST2 and ST3*
+
 This package is meant to help build legal documents in Sublime. There are two components of the package at this point. The first is a set of language files for syntax highlighting `lmd` files in Sublime. The second is a set of features to build and export documents using `lmd` syntax. This set of features will:
 
 * Automate the building of the `lmd` YAML Front Matter

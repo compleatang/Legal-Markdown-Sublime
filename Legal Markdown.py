@@ -10,7 +10,10 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
     self.get_selection_position()
     self.active_view = self.view.window().active_view()
     self.buffer_region = sublime.Region(0, self.active_view.size())
-    self.update_view(self.yamlize_buffer())
+    contents = self.yamlize_buffer()
+    self.view.erase(edit, self.buffer_region)
+    self.view.insert(edit, 0, contents)
+    self.view.end_edit(edit)
     self.reset_selection_position()
 
   def yamlize_buffer(self):
@@ -20,16 +23,13 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
       stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     out = yamlizer.communicate(body.encode("utf-8"))[0].decode('utf8')
     if (out == "" and body != ""):
-      sublime.error_message("check your ruby interpreter settings")
+      sublime.error_message("Something went wrong. Please check your Ruby Path settings. If it continues file an issue on Github.")
       return body
     else:
       return out
 
-  def update_view(self, contents):
-    edit = self.view.begin_edit()
-    self.view.erase(edit, self.buffer_region)
-    self.view.insert(edit, 0, contents)
-    self.view.end_edit(edit)
+  # def update_view(self, contents):
+    # edit = self.view.begin_edit()
 
   def reset_selection_position(self):
     self.view.sel().clear()
@@ -47,7 +47,7 @@ class BuildYamlFrontMatter(sublime_plugin.TextCommand):
     ruby_script = os.path.join(sublime.packages_path(), "Legal Document Creator", "lib", 'legal_markdown.rb')
     args = ["--headers", "-", "-"]
     command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
-    print command
+    print(command)
     return command
 
 class LegalMarkdownToNormalMarkdown(sublime_plugin.WindowCommand):
@@ -87,13 +87,13 @@ class LegalMarkdownExport(sublime_plugin.WindowCommand):
     def run(self):
         self.active_view = self.window.active_view()
         self.buffer_region = sublime.Region(0, self.active_view.size())
-        self.window.show_quick_panel(self.get_the_settings('build-formats').keys(), self.build_new_format)
+        self.window.show_quick_panel(list(self.get_the_settings('build-formats').keys()), self.build_new_format)
 
     def build_new_format(self, format_to):
         formats = self.get_the_settings('build-formats')
         if format_to == -1:
             return
-        format_to = formats[formats.keys()[format_to]]
+        format_to = formats[list(formats.keys())[format_to]]
         view = self.window.active_view()
 
         # string to work with

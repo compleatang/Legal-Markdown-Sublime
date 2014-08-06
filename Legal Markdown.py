@@ -112,9 +112,9 @@ class LegalMarkdownExport(sublime_plugin.WindowCommand):
             command.extend(format_to['to'])
         # if output file
         output_file = False
-        if format_to['file-output'] == 'true':
+        if format_to['file-output'] != 'false':
             output_file = os.path.splitext(sublime.Window.active_view(sublime.active_window()).file_name())[0]
-            output_file_name =  '"' + output_file + "." + format_to['to'][0] + '"'
+            output_file_name =  '"' + output_file + "." + format_to['file-output'] + '"'
             command.extend(['-o', output_file_name])
         # final build
         command = ' '.join(command)

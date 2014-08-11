@@ -75,6 +75,7 @@ class LegalMarkdownToNormalMarkdown(sublime_plugin.WindowCommand):
     ruby_script = os.path.join(sublime.packages_path(), "Legal Document Creator", "lib", 'legal_markdown.rb')
     args = ["-", "'" + output_file + "'"]
     command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
+    print(command)
     return command
 
   def get_current_file(self):
@@ -170,6 +171,7 @@ class LegalMarkdownExport(sublime_plugin.WindowCommand):
         ruby_script = os.path.join(sublime.packages_path(), "Legal Document Creator", "lib", 'legal_markdown.rb')
         args = ["-", "-"]
         md_command = ruby_interpreter + " '" + ruby_script + "' " + ' '.join(args)
+        print(md_command)
         mdizr = subprocess.Popen(md_command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         out = mdizr.communicate(contents.encode("utf-8"))[0].decode('utf8')
         return out
